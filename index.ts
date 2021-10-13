@@ -60,7 +60,7 @@ client.on("ready", () => {
     })
 
     commandManager?.create({
-        name: 'editVacancies',
+        name: 'editvacancies',
         description: '更改球局人數時用',
         options: 
             [{
@@ -76,58 +76,57 @@ client.on("ready", () => {
 
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) return
-    
-    const  { commandName, options , user} = interaction
-    await interaction.deferReply()
-    if (commandName === "create"){
 
-        if (!interaction.channel?.isThread()){
+    await interaction.deferReply()
+    if (!interaction.channel?.isThread()){
+        await interaction.editReply({
+            content: 'This command must be used in a thread.',
+            //ephemeral: true
+        })
+        return
+    }
+    const  { commandName, options , user} = interaction
+    if (commandName === "create"){
+        console.log("isThread")
+        //check if a list is created already 
+        var isListCreated = false;
+        let botId = client.user?.id;
+        let massageManager = interaction.channel.messages
+        await massageManager.fetchPinned().then((pinnedMessages) => {
+            console.log("Fetched " + pinnedMessages.size + " pinned messages.")
+            if(pinnedMessages.size > 0){
+                pinnedMessages.forEach((pinned) =>{
+                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
+                    if (pinned.member?.user.id == botId){
+                        console.log("List found")
+                        isListCreated = true;
+                        
+                    }
+                })
+            }
+        })
+        if(isListCreated){
             interaction.editReply({
-                content: 'This command must be used in a thread.',
+                content: 'A Participant List is already created.',
                 //ephemeral: true
             })
-        }else{
-            console.log("isThread")
-            //check if a list is created already 
-            var isListCreated = false;
-            let botId = client.user?.id;
-            let massageManager = interaction.channel.messages
-            await massageManager.fetchPinned().then((pinnedMessages) => {
-                console.log("Fetched " + pinnedMessages.size + " pinned messages.")
-                if(pinnedMessages.size > 0){
-                    pinnedMessages.forEach((pinned) =>{
-                        console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
-                        if (pinned.member?.user.id == botId){
-                            console.log("List found")
-                            isListCreated = true;
-                            
-                        }
-                    })
-                }
-            })
-            if(isListCreated){
-                interaction.editReply({
-                    content: 'A Participant List is already created.',
-                    //ephemeral: true
-                })
-                return 
-            }
-            
-            const createrTag = '<@' + user.id + '>'
-            const participantList:string[] = [createrTag];
-            const vacancies = options.getNumber("vacancies")
-            const json = {vacancies, participantList}
-            interaction.channel.send({
-                content: '報名表\n1. ' + createrTag + "```" + JSON.stringify(json) +"```",
-            })
-            .then((message) => {
-                message.pin()
-                interaction.editReply({
-                    content: 'Successfully create a participant list.',
-                    //ephemeral: true
-                })
-            })
+            return 
         }
+        
+        const createrTag = '<@' + user.id + '>'
+        const participantList:string[] = [createrTag];
+        const vacancies = options.getNumber("vacancies")
+        const json = {vacancies, participantList}
+        interaction.channel.send({
+            content: '報名表\n1. ' + createrTag + "```" + JSON.stringify(json) +"```",
+        })
+        .then((message) => {
+            message.pin()
+            interaction.editReply({
+                content: 'Successfully create a participant list.',
+                //ephemeral: true
+            })
+        })
     } else if (commandName === "join"){
         let botId = client.user?.id;
         let massageManager = interaction.channel?.messages
@@ -139,8 +138,6 @@ client.on("interactionCreate", async (interaction) => {
                     console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
                         console.log("List found for /join")
-
-                        //interaction.deferReply();
 
                         let updatedContent = joinMatch(pinned.content, memberId)
                         pinned.edit({
@@ -165,9 +162,6 @@ client.on("interactionCreate", async (interaction) => {
                     if (pinned.member?.user.id == botId){
                         console.log("List found for /withdraw")
 
-                        //interaction.deferReply();
-                        //interaction.reply("Working on it")
-
                         let updatedContent = withdraw(pinned.content, memberId)
                         console.log(updatedContent)
                         
@@ -187,20 +181,6 @@ client.on("interactionCreate", async (interaction) => {
                             })
                         })
                         
-                        
-                       /*
-                       var response = {content: "You have not joined the match yet."}
-                        if (updatedContent !== ""){
-                            pinned.edit({
-                                content: updatedContent,
-                            }).then( () => {
-                                response = {content: "Withdraw successfully."}
-                            })
-                        }
-                        
-                        console.log(response)
-                        interaction.editReply(response);
-                        */
                     }
                 })
             }
@@ -215,11 +195,10 @@ client.on("interactionCreate", async (interaction) => {
         console.log("sending reply")
         interaction.editReply(content)
         console.log("Finished")
-    } else if (commandName == "editVacancies"){
-        const botId = client.user?.id;
+    } else if (commandName == "editvacancies"){
+        let botId = client.user?.id;
         let massageManager = interaction.channel?.messages
-        const memberId = user.id
-        const newVacancies = options.getNumber("vacancies")!
+        let newVacancies = options.getNumber("vacancies")!
         await massageManager?.fetchPinned().then((pinnedMessages) => {
             //console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
