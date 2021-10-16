@@ -1,6 +1,6 @@
 import DiscordJS, { Intents } from 'discord.js'
 import dotenv from 'dotenv'
-import { editVacancies, joinMatch, withdraw } from './join'
+import { createMatch, editRemark, editVacancies, joinMatch, Participant, withdraw } from './join'
 
 dotenv.config()
 
@@ -39,6 +39,13 @@ client.on("ready", () => {
     commandManager?.create({
         name: 'join',
         description: '參加球局時用',
+        options: 
+        [{
+            name: 'remark',
+            description: "optional:備注",
+            required: false,
+            type: DiscordJS.Constants.ApplicationCommandOptionTypes.STRING
+        }]
     })
 
     commandManager?.create({
@@ -72,26 +79,39 @@ client.on("ready", () => {
         
     })
 
+    commandManager?.create({
+        name: 'editremark',
+        description: '更改備注時用',
+        options: 
+            [{
+                name: 'remark',
+                description: "備注",
+                required: true,
+                type: DiscordJS.Constants.ApplicationCommandOptionTypes.STRING
+            }]
+        
+    })
+
 })
 
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isCommand()) return
+    if (!interaction.isCommand()) return;
 
-    await interaction.deferReply()
+    await interaction.deferReply();
     if (!interaction.channel?.isThread()){
         await interaction.editReply({
             content: 'This command must be used in a thread.',
             //ephemeral: true
         })
-        return
+        return;
     }
-    const  { commandName, options , user} = interaction
+    const  { commandName, options , user} = interaction;
     if (commandName === "create"){
-        console.log("isThread")
         //check if a list is created already 
         var isListCreated = false;
         let botId = client.user?.id;
         let massageManager = interaction.channel.messages
+        const vacancies = options.getNumber("vacancies")!
         await massageManager.fetchPinned().then((pinnedMessages) => {
             console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
@@ -110,27 +130,24 @@ client.on("interactionCreate", async (interaction) => {
                 content: 'A Participant List is already created.',
                 //ephemeral: true
             })
-            return 
+            return;
         }
-        
-        const createrTag = '<@' + user.id + '>'
-        const participantList:string[] = [createrTag];
-        const vacancies = options.getNumber("vacancies")
-        const json = {vacancies, participantList}
+        let messageContent = createMatch(user.id, vacancies);
         interaction.channel.send({
-            content: '報名表\n1. ' + createrTag + "```" + JSON.stringify(json) +"```",
+            content: messageContent,
         })
         .then((message) => {
             message.pin()
             interaction.editReply({
                 content: 'Successfully create a participant list.',
-                //ephemeral: true
             })
         })
+
     } else if (commandName === "join"){
         let botId = client.user?.id;
         let massageManager = interaction.channel?.messages
         let memberId = user.id
+        let remark = options.getString("remark")!;
         await massageManager?.fetchPinned().then((pinnedMessages) => {
             console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
@@ -138,8 +155,8 @@ client.on("interactionCreate", async (interaction) => {
                     console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
                         console.log("List found for /join")
-
-                        let updatedContent = joinMatch(pinned.content, memberId)
+                        
+                        let updatedContent = joinMatch(pinned.content, memberId, remark)
                         pinned.edit({
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
@@ -172,7 +189,7 @@ client.on("interactionCreate", async (interaction) => {
                                 })
                                 .then(() => {console.log("withdraw form empty list, warning sent.")})
                                 .catch(() => {console.log("Exception when withdrawing from empty list.")})
-                            return      
+                            return;      
                         }
                         pinned.edit({
                             content: updatedContent,
@@ -214,6 +231,41 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: `Edited vacancies to ${newVacancies} `,
+                            })
+                        })
+                        
+                    }
+                })
+            }
+        })
+    } else if (commandName == "editremark") {
+        let botId = client.user?.id;
+        let massageManager = interaction.channel?.messages;
+        let memberId = user.id;
+        let newRemark = options.getString("remark")!;
+        await massageManager?.fetchPinned().then((pinnedMessages) => {
+            if(pinnedMessages.size > 0){
+                pinnedMessages.forEach((pinned) =>{
+                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
+                    if (pinned.member?.user.id == botId){
+                        console.log("List found for /editremark")
+
+                        let updatedContent = editRemark(pinned.content, memberId, newRemark);
+                        console.log(updatedContent);
+                        
+                        if (updatedContent === ""){
+                            console.log("You have not joined the match yet.")
+                            interaction.editReply({
+                                content: 'You have not joined the match yet.',
+                                })
+                                .then(() => {console.log("withdraw form empty list, warning sent.")})
+                                .catch(() => {console.log("Exception when withdrawing from empty list.")})
+                            return;      
+                        }
+                        pinned.edit({
+                            content: updatedContent,
+                        }).then( () => {interaction.editReply({
+                            content: `Edited remark to ${newRemark} `,
                             })
                         })
                         
