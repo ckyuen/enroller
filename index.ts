@@ -5,14 +5,15 @@ import {setCommands} from './commands'
 
 const version = "1.0.0";
 
-dotenv.config()
+dotenv.config();
+console.log("App started");
 
 const client = new DiscordJS.Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS],
 })
 
 client.on("ready", () => {
-    console.log("The bot is ready")
+    console.log("The bot is ready");
 
     //register command
     const guildId = process.env.SERVER_ID;
