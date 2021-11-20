@@ -1,12 +1,11 @@
 {
-  "name": "DiscordBot",
+  "name": "enroller",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.ts",
-    "start": "ts-node index.ts",
+    "start": "node build/index.js",
     "build": "tsc",
     "postinstall": "npm run build"
   },
