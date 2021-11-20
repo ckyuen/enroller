@@ -1,6 +1,9 @@
-import DiscordJS, { Intents } from 'discord.js'
+import DiscordJS, { Intents, GuildApplicationCommandManager} from 'discord.js'
 import dotenv from 'dotenv'
-import { createMatch, editRemark, editVacancies, joinMatch, Participant, withdraw } from './join'
+import { createMatch, editRemark, editVacancies, joinMatch, Participant, withdraw, insertPlayer, validateVancancies} from './join'
+import {setCommands} from './commands'
+
+const version = "1.0.0";
 
 dotenv.config()
 
@@ -12,86 +15,19 @@ client.on("ready", () => {
     console.log("The bot is ready")
 
     //register command
-    const guildId = "881125024730349598"      //test server
-    const guild = client.guilds.cache.get(guildId)
-    let commandManager  
+    const guildId = process.env.SERVER_ID;
+    const guild = client.guilds.cache.get(guildId || '881125024730349598');
+    let commandManager:GuildApplicationCommandManager;
     
     if (guild) {
         commandManager = guild.commands
     } else {
         //if guild not exists
-        commandManager = client.application?.commands
+        //commandManager = client.application?.commands
+        console.log("Guild ID is invalid. Exit application now.");
     }
-    
-    commandManager?.create({
-        name: 'create',
-        description: '開球局時用',
-        options: 
-            [{
-                name: 'vacancies',
-                description: "球局人數",
-                required: true,
-                type: DiscordJS.Constants.ApplicationCommandOptionTypes.NUMBER
-            }]
-        
-    })
 
-    commandManager?.create({
-        name: 'join',
-        description: '參加球局時用',
-        options: 
-        [{
-            name: 'remark',
-            description: "optional:備注",
-            required: false,
-            type: DiscordJS.Constants.ApplicationCommandOptionTypes.STRING
-        }]
-    })
-
-    commandManager?.create({
-        name: 'withdraw',
-        description: '退出球局時用',
-    })
-
-    commandManager?.create({
-        name: 'a',
-        description: 'a',
-        options: 
-            [{
-                name: 'response',
-                description: "response",
-                required: true,
-                type: DiscordJS.Constants.ApplicationCommandOptionTypes.NUMBER
-            }]
-        
-    })
-
-    commandManager?.create({
-        name: 'editvacancies',
-        description: '更改球局人數時用',
-        options: 
-            [{
-                name: 'vacancies',
-                description: "球局人數",
-                required: true,
-                type: DiscordJS.Constants.ApplicationCommandOptionTypes.NUMBER
-            }]
-        
-    })
-
-    commandManager?.create({
-        name: 'editremark',
-        description: '更改備注時用',
-        options: 
-            [{
-                name: 'remark',
-                description: "備注",
-                required: true,
-                type: DiscordJS.Constants.ApplicationCommandOptionTypes.STRING
-            }]
-        
-    })
-
+    setCommands(commandManager!);
 })
 
 client.on("interactionCreate", async (interaction) => {
@@ -101,45 +37,69 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.channel?.isThread()){
         await interaction.editReply({
             content: 'This command must be used in a thread.',
-            //ephemeral: true
         })
         return;
     }
-    const  { commandName, options , user} = interaction;
-    if (commandName === "create"){
+    const  {commandName, options , user} = interaction;
+    //Log 
+    console.log(`/${commandName} form ${user.tag}`);
+
+    if (commandName === "ownercreate"){
         //check if a list is created already 
-        var isListCreated = false;
+        let isListCreated = false;
+        let isFromOwner = true;
         let botId = client.user?.id;
         let massageManager = interaction.channel.messages
         const vacancies = options.getNumber("vacancies")!
+
+        //check if the user is the owner
+        await interaction.channel.fetchOwner().then((owner) => {
+            if (owner?.id !== user.id && user.id !== process.env.SUPER_USER_ID) {
+                isFromOwner = false;
+            }
+        });
+        if (!isFromOwner){
+            await interaction.editReply({
+                content: 'You are not the owner of this thread.',
+            })
+            return;
+        }
+        //validateVancancies
+        let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
+        if (!validateVancancies(vacancies, maxVacancies)){
+            await interaction.editReply({
+                content: `Vacancies must be between 0 to ${maxVacancies}.`,
+            })
+            return;
+        }
+        //check if created
         await massageManager.fetchPinned().then((pinnedMessages) => {
-            console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
                 pinnedMessages.forEach((pinned) =>{
-                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
-                        console.log("List found")
                         isListCreated = true;
                         
                     }
                 })
             }
+            
         })
         if(isListCreated){
-            interaction.editReply({
-                content: 'A Participant List is already created.',
+            await interaction.editReply({
+                content: 'Only one list is allowed.',
                 //ephemeral: true
             })
             return;
         }
+        //create
         let messageContent = createMatch(user.id, vacancies);
-        interaction.channel.send({
+        await interaction.channel.send({
             content: messageContent,
         })
         .then((message) => {
             message.pin()
             interaction.editReply({
-                content: 'Successfully create a participant list.',
+                content: 'Participant list created successfully.',
             })
         })
 
@@ -149,14 +109,19 @@ client.on("interactionCreate", async (interaction) => {
         let memberId = user.id
         let remark = options.getString("remark")!;
         await massageManager?.fetchPinned().then((pinnedMessages) => {
-            console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
                 pinnedMessages.forEach((pinned) =>{
-                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
-                        console.log("List found for /join")
                         
-                        let updatedContent = joinMatch(pinned.content, memberId, remark)
+                        let updatedContent = joinMatch(pinned.content, memberId, remark);
+
+                        if (updatedContent === ""){
+                            interaction.editReply({
+                                content: 'You have already joined.',
+                                })
+                            return;      
+                        }
+
                         pinned.edit({
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
@@ -165,6 +130,10 @@ client.on("interactionCreate", async (interaction) => {
                         })
                     }
                 })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
             }
         })
     } else if (commandName === "withdraw"){
@@ -172,23 +141,16 @@ client.on("interactionCreate", async (interaction) => {
         let massageManager = interaction.channel?.messages
         let memberId = user.id
         await massageManager?.fetchPinned().then((pinnedMessages) => {
-            //console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
                 pinnedMessages.forEach((pinned) =>{
-                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
-                        console.log("List found for /withdraw")
 
                         let updatedContent = withdraw(pinned.content, memberId)
-                        console.log(updatedContent)
                         
                         if (updatedContent === ""){
-                            console.log("You have not joined the match yet.")
                             interaction.editReply({
-                                content: 'You have not joined the match yet.',
+                                content: 'You have not joined yet.',
                                 })
-                                .then(() => {console.log("withdraw form empty list, warning sent.")})
-                                .catch(() => {console.log("Exception when withdrawing from empty list.")})
                             return;      
                         }
                         pinned.edit({
@@ -200,45 +162,60 @@ client.on("interactionCreate", async (interaction) => {
                         
                     }
                 })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
             }
         })
-    } else if (commandName === "a"){
-        var content = {content: "0"}
-        console.log("response init to 0")
-        if (options.getNumber("response") === 1){
-            content = {content: "1"}
-            console.log("response set to 1")
-        }
-        console.log("sending reply")
-        interaction.editReply(content)
-        console.log("Finished")
-    } else if (commandName == "editvacancies"){
+    } else if (commandName === "ownereditvacancies"){
         let botId = client.user?.id;
-        let massageManager = interaction.channel?.messages
-        let newVacancies = options.getNumber("vacancies")!
+        let massageManager = interaction.channel?.messages;
+        let newVacancies = options.getNumber("vacancies")!;
+        let isFromOwner = true;
+        await interaction.channel.fetchOwner().then((owner) => {
+            if (owner?.id !== user.id && user.id !== process.env.SUPER_USER_ID) {
+                isFromOwner = false;
+            }
+        });
+        if (!isFromOwner){
+            await interaction.editReply({
+                content: 'You are not the owner of this thread.',
+            })
+            return;
+        }
+
+        let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
+        if (!validateVancancies(newVacancies, maxVacancies)){
+            await interaction.editReply({
+                content: `Vacancies must be between 1 to ${maxVacancies}.`,
+            })
+            return;
+        }
+
         await massageManager?.fetchPinned().then((pinnedMessages) => {
-            //console.log("Fetched " + pinnedMessages.size + " pinned messages.")
             if(pinnedMessages.size > 0){
                 pinnedMessages.forEach((pinned) =>{
-                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
-                        console.log("List found for /editVacancies")
 
                         let updatedContent = editVacancies(pinned.content, newVacancies)
-                        console.log(updatedContent)
                         
                         pinned.edit({
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
-                            content: `Edited vacancies to ${newVacancies} `,
+                            content: `Edited vacancies to ${newVacancies}. `,
                             })
                         })
                         
                     }
                 })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
             }
         })
-    } else if (commandName == "editremark") {
+    } else if (commandName === "editremark") {
         let botId = client.user?.id;
         let massageManager = interaction.channel?.messages;
         let memberId = user.id;
@@ -246,52 +223,184 @@ client.on("interactionCreate", async (interaction) => {
         await massageManager?.fetchPinned().then((pinnedMessages) => {
             if(pinnedMessages.size > 0){
                 pinnedMessages.forEach((pinned) =>{
-                    console.log("Bot Id: " + botId + " meessage author: " + pinned.member?.user.id)
                     if (pinned.member?.user.id == botId){
-                        console.log("List found for /editremark")
 
-                        let updatedContent = editRemark(pinned.content, memberId, newRemark);
-                        console.log(updatedContent);
+                        if(newRemark === null) newRemark = "";
+                        let returnMassage = editRemark(pinned.content, memberId, newRemark);
                         
-                        if (updatedContent === ""){
-                            console.log("You have not joined the match yet.")
+                        if (returnMassage.content === ""){
                             interaction.editReply({
-                                content: 'You have not joined the match yet.',
+                                content: 'You have not joined yet.',
                                 })
-                                .then(() => {console.log("withdraw form empty list, warning sent.")})
-                                .catch(() => {console.log("Exception when withdrawing from empty list.")})
                             return;      
                         }
                         pinned.edit({
-                            content: updatedContent,
+                            content: returnMassage.content,
                         }).then( () => {interaction.editReply({
-                            content: `Edited remark to ${newRemark} `,
+                            content: `Edited remark from ${returnMassage.oldValue} to ${newRemark}.`,
                             })
                         })
                         
                     }
                 })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
             }
         })
-    }
-})
+    } else if (commandName === "ownerinsertplayer"){
+        let botId = client.user?.id;
+        let massageManager = interaction.channel?.messages;
+        let position = options.getNumber("position")!;
+        let newParticipant = options.getUser("participant")!;
+        let remark = options.getString("remark")!;
+        let isFromOwner = true;
 
-/*
-client.on("threadCreate" , (thread) => {
-    var ownerId = thread.ownerId
+        await interaction.channel.fetchOwner().then((owner) => {
+            if (owner?.id !== user.id && user.id !== process.env.SUPER_USER_ID) {
+            isFromOwner = false;
+            }
+        });
+        if (!isFromOwner){
+            await interaction.editReply({
+                content: 'You are not the owner of this thread.',
+            })
+            return;
+        }
+
+        let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
+        if (!validateVancancies(position, maxVacancies)){
+            await interaction.editReply({
+                content: `Position must be between 1 to ${maxVacancies}.`,
+            })
+            return;
+        }
+
+        await massageManager?.fetchPinned().then((pinnedMessages) => {
+            if(pinnedMessages.size > 0){
+                pinnedMessages.forEach((pinned) =>{
+                    if (pinned.member?.user.id == botId){
+                        
+                        let returnMassage = insertPlayer(pinned.content, newParticipant.id, position, remark)
+                        pinned.edit({
+                            content: returnMassage.content,
+                        }).then( () => {
+                            if(returnMassage.oldValue === "true"){
+                                interaction.editReply({
+                                    content: `<@${newParticipant.id}> is appended to the list.`,
+                                })
+                            }else{
+                                interaction.editReply({
+                                    content: `<@${newParticipant.id}> is inserted to position ${position}.`,
+                                })
+                            }
+                        })
+                    }
+                })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
+            }
+        })
+    } else if (commandName === "ownereditremark"){
+        let botId = client.user?.id;
+        let massageManager = interaction.channel?.messages;
+        let participant = options.getUser("participant")!;
+        let newRemark = options.getString("remark")!;
+        let isFromOwner = true;
+        await interaction.channel.fetchOwner().then((owner) => {
+            if (owner?.id !== user.id && user.id !== process.env.SUPER_USER_ID) {
+            isFromOwner = false;
+            }
+        });
+        if (!isFromOwner){
+            await interaction.editReply({
+                content: 'You are not the owner of this thread.',
+            })
+            return;
+        }
+
+        await massageManager?.fetchPinned().then((pinnedMessages) => {
+            if(pinnedMessages.size > 0){
+                pinnedMessages.forEach((pinned) =>{
+                    if (pinned.member?.user.id == botId){
+                        if(newRemark === null) newRemark = "";
+                        let returnMassage = editRemark(pinned.content, participant.id, newRemark);
+
+                        if (returnMassage.content === ""){
+                            interaction.editReply({
+                                content: `<@${participant.id}> has not joined yet.`,
+                                })
+                            return;      
+                        }
+
+                        pinned.edit({
+                            content: returnMassage.content,
+                        }).then( () => {interaction.editReply({
+                            content: `Updated <@${participant.id}> remark from ${returnMassage.oldValue} to ${newRemark}.`,
+                            })
+                        })
+                    }
+                })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
+            }
+        })
+    } else if (commandName === ("ownerkickplayer")){
+        let botId = client.user?.id;
+        let massageManager = interaction.channel?.messages;
+        let participant = options.getUser("participant")!;
+        let isFromOwner = true;
+        await interaction.channel.fetchOwner().then((owner) => {
+            if (owner?.id !== user.id && user.id !== process.env.SUPER_USER_ID) {
+            isFromOwner = false;
+            }
+        });
+        if (!isFromOwner){
+            await interaction.editReply({
+                content: 'You are not the owner of this thread.',
+            })
+            return;
+        }
+
+        await massageManager?.fetchPinned().then((pinnedMessages) => {
+            if(pinnedMessages.size > 0){
+                pinnedMessages.forEach((pinned) =>{
+                    if (pinned.member?.user.id == botId){
+
+                        let updatedContent = withdraw(pinned.content, participant.id);
+                        
+                        if (updatedContent === ""){
+                            interaction.editReply({
+                                content: `<@${participant.id}> has not joined yet.`,
+                                })
+                            return;      
+                        }
+                        pinned.edit({
+                            content: updatedContent,
+                        }).then( () => {interaction.editReply({
+                            content: `<@${participant.id}> is kicked.`,
+                            })
+                        })
+                        
+                    }
+                })
+            } else {
+                interaction.editReply({
+                    content: 'Participant List is not created yet.',
+                    })
+            }
+        })
+    } else if (commandName === ("enrollerversion")){
+        interaction.editReply({
+            content: `Current version: ${version}`,
+            })
+    }
     
-    let creater = thread.fetchOwner().then((owner) =>{
-        ownerName = owner?.user?.username.get
-        console.log(ownerName)
-        thread.send({
-            content: ownerName,
-        }) 
-    })
-    
-    thread.send({
-        content: '1. <@' + ownerId + '>',
-    }) 
-}) 
-*/
+})
 
 client.login(process.env.TOKEN);
