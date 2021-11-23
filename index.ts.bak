@@ -260,9 +260,8 @@ client.on("interactionCreate", async (interaction) => {
                 pinnedMessages.forEach((pinned) =>{
                     if (pinned.member?.user.id == botId){
 
-                        
                         isListFound = true;
-						if(newRemark === null) newRemark = "";
+
                         let returnMassage = editRemark(pinned.content, memberId, newRemark);
                         
                         if (returnMassage.content === ""){
