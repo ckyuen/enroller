@@ -143,7 +143,7 @@ client.on("interactionCreate", async (interaction) => {
                             content: 'Joined successfully.',
                             }).catch( (e) => {
                                 interaction.editReply({
-                                    content: 'Fail to Update List.',
+                                    content: 'Failed to update the list.',
                                     })
                                     console.error(e);
                             })
@@ -182,7 +182,7 @@ client.on("interactionCreate", async (interaction) => {
                             content: 'Withdraw successfully.',
                             }).catch( (e) => {
                                 interaction.editReply({
-                                    content: 'Fail to Update List.',
+                                    content: 'Failed to update the list.',
                                     })
                                     console.error(e);
                             })
@@ -237,7 +237,7 @@ client.on("interactionCreate", async (interaction) => {
                             content: `Edited vacancies to ${newVacancies}. `,
                             }).catch( (e) => {
                                 interaction.editReply({
-                                    content: 'Fail to Update List.',
+                                    content: 'Failed to update the list.',
                                     })
                                 console.error(e);
                             })
@@ -293,7 +293,7 @@ client.on("interactionCreate", async (interaction) => {
                             content: `Edited remark from ${returnMassage.oldValue} to ${newRemark}.`,
                             }).catch( (e) => {
                                 interaction.editReply({
-                                    content: 'Fail to Update List.',
+                                    content: 'Failed to update the list.',
                                     })
                                 console.error(e);
                             })
@@ -368,7 +368,7 @@ client.on("interactionCreate", async (interaction) => {
                             }
                         }).catch( (e) => {
                             interaction.editReply({
-                                content: 'Fail to Update the List.',
+                                content: 'Failed to update the list.',
                                 })
                             console.error(e);
                         })
