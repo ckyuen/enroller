@@ -130,10 +130,11 @@ export function insertPlayer(content:string, memberId:string, newPosition:number
 }
 
 export function validateVancancies(input:number, maxValue:number):boolean{
-            if (maxValue == NaN || input > maxValue || input < 0){
-                return false;
-            }
-            return true;
+
+    if (maxValue == NaN || input > maxValue || input < 0){
+        return false;
+    }
+    return true;
 }
 
 function toDisplayList(vacancies:number, participantList:Participant[]):string{

@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 import { createMatch, editRemark, editVacancies, joinMatch, Participant, withdraw, insertPlayer, validateVancancies} from './join'
 import {setCommands} from './commands'
 
-const version = "1.0.1";
+const version = "1.0.2";
 
 dotenv.config();
 console.log("App started");
@@ -67,9 +67,9 @@ client.on("interactionCreate", async (interaction) => {
         }
         //validateVancancies
         let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
-        if (!validateVancancies(vacancies, maxVacancies)){
+        if (!Number.isInteger(vacancies) || !validateVancancies(vacancies, maxVacancies)){
             await interaction.editReply({
-                content: `Vacancies must be between 0 to ${maxVacancies}.`,
+                content: `Vacancies must be an integer between 1 to ${maxVacancies}.`,
             })
             return;
         }
@@ -141,6 +141,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: 'Joined successfully.',
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Fail to Update List.',
+                                    })
+                                    console.error(e);
                             })
                         })
                     }
@@ -175,6 +180,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: 'Withdraw successfully.',
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Fail to Update List.',
+                                    })
+                                    console.error(e);
                             })
                         })
                         
@@ -206,9 +216,9 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
-        if (!validateVancancies(newVacancies, maxVacancies)){
+        if (!Number.isInteger(newVacancies) || !validateVancancies(newVacancies, maxVacancies)){
             await interaction.editReply({
-                content: `Vacancies must be between 1 to ${maxVacancies}.`,
+                content: `Vacancies must be an integer between 1 to ${maxVacancies}.`,
             })
             return;
         }
@@ -225,6 +235,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: `Edited vacancies to ${newVacancies}. `,
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Fail to Update List.',
+                                    })
+                                console.error(e);
                             })
                         })
                         
@@ -276,6 +291,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: returnMassage.content,
                         }).then( () => {interaction.editReply({
                             content: `Edited remark from ${returnMassage.oldValue} to ${newRemark}.`,
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Fail to Update List.',
+                                    })
+                                console.error(e);
                             })
                         })
                         
@@ -309,9 +329,9 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         let maxVacancies = Number(process.env.MAX_VACANCIES) || 100;
-        if (!validateVancancies(position, maxVacancies)){
+        if (!Number.isInteger(position) ||  !validateVancancies(position, maxVacancies)){
             await interaction.editReply({
-                content: `Position must be between 1 to ${maxVacancies}.`,
+                content: `Position must be an integer an between 1 to ${maxVacancies}.`,
             })
             return;
         }
@@ -346,6 +366,11 @@ client.on("interactionCreate", async (interaction) => {
                                     content: `<@${newParticipant.id}> is inserted to position ${position}.`,
                                 })
                             }
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Fail to Update the List.',
+                                })
+                            console.error(e);
                         })
                     }
                 })
@@ -406,6 +431,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: returnMassage.content,
                         }).then( () => {interaction.editReply({
                             content: `Updated <@${participant.id}> remark from ${returnMassage.oldValue} to ${newRemark}.`,
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Failed to update the list.',
+                                    })
+                                console.error(e);
                             })
                         })
                     }
@@ -453,6 +483,11 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: `<@${participant.id}> is kicked.`,
+                            }).catch( (e) => {
+                                interaction.editReply({
+                                    content: 'Failed to update the list.',
+                                    })
+                                console.error(e);
                             })
                         })
                         
