@@ -169,3 +169,12 @@ function toDisplayList(vacancies:number, participantList:Participant[]):string{
     return updatedContent;
 }
 
+function validateJSON(jsonStr:string):boolean{
+    try {
+        JSON.parse(jsonStr);
+        return true;
+    }catch{
+        return false;
+    }
+}
+

@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 import { createMatch, editRemark, editVacancies, joinMatch, Participant, withdraw, insertPlayer, validateVancancies} from './join'
 import {setCommands} from './commands'
 
-const version = "1.0.2";
+const version = "1.0.3";
 
 dotenv.config();
 console.log("App started");
@@ -141,12 +141,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: 'Joined successfully.',
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                    console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                                console.error(e);
                         })
                     }
                 })
@@ -180,12 +180,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: 'Withdraw successfully.',
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                    console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                                console.error(e);
                         })
                         
                     }
@@ -235,12 +235,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: `Edited vacancies to ${newVacancies}. `,
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                            console.error(e);
                         })
                         
                     }
@@ -291,12 +291,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: returnMassage.content,
                         }).then( () => {interaction.editReply({
                             content: `Edited remark from ${returnMassage.oldValue} to ${newRemark}.`,
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                            console.error(e);
                         })
                         
                     }
@@ -431,12 +431,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: returnMassage.content,
                         }).then( () => {interaction.editReply({
                             content: `Updated <@${participant.id}> remark from ${returnMassage.oldValue} to ${newRemark}.`,
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                            console.error(e);
                         })
                     }
                 })
@@ -483,12 +483,12 @@ client.on("interactionCreate", async (interaction) => {
                             content: updatedContent,
                         }).then( () => {interaction.editReply({
                             content: `<@${participant.id}> is kicked.`,
-                            }).catch( (e) => {
-                                interaction.editReply({
-                                    content: 'Failed to update the list.',
-                                    })
-                                console.error(e);
                             })
+                        }).catch( (e) => {
+                            interaction.editReply({
+                                content: 'Failed to update the list.',
+                                })
+                            console.error(e);
                         })
                         
                     }
