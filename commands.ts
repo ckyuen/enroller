@@ -112,6 +112,10 @@ export function setCommands(commandManager:GuildApplicationCommandManager){
             {
                 name: 'enrollerversion',
                 description: 'Display current version',
+            },
+            {
+                name: 'patchlist',
+                description: 'Patch command for version 2.0.0.',
             }
 
         ]).catch(console.error);
