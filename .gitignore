@@ -2,3 +2,5 @@
 node_modules/
 *.js
 index.ts.bak
+workspace.code-workspace
+Procfile
